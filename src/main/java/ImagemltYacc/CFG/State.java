@@ -1,5 +1,7 @@
 package ImagemltYacc.CFG;
 
+import java.util.Objects;
+
 public class State {
     public enum STATUS {
         STRART,
@@ -9,6 +11,18 @@ public class State {
         EOF
     };
     private int id;
+
+    public String getDescription() {
+        return description;
+    }
+
+
+
+    public void setDescription(String description) {
+        this.description = description;
+    }
+
+    private String description;
 
     public Token getToken() {
         return token;

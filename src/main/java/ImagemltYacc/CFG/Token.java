@@ -2,7 +2,7 @@ package ImagemltYacc.CFG;
 
 public class Token {
     private int id;
-    private Character ch;
+    private String ch;
     public enum TokenType{
         EOF,
         NORMAL,
@@ -19,7 +19,7 @@ public class Token {
         this.type = type;
     }
 
-    public Token(int id, Character ch) {
+    public Token(int id, String ch) {
         this.id = id;
         this.ch = ch;
         this.type=TokenType.NORMAL;
@@ -38,11 +38,11 @@ public class Token {
         this.id = id;
     }
 
-    public Character getCh() {
+    public String getCh() {
         return ch;
     }
 
-    public void setCh(Character ch) {
+    public void setCh(String ch) {
         this.ch = ch;
     }
 }

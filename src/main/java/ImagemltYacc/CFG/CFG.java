@@ -10,9 +10,17 @@ public class CFG {
         this.states = states;
         this.productions=new Vector<>();
         this.transitions=new HashMap<>();
+        for(State s:states){
+            if(s.getStatus()== State.STATUS.TOKEN){
+                tokenMap.put(s.getToken(),s);
+            }
+        }
+        tokenMap.put(EOF,EOFState);
     }
     public static Token emptyState=new Token(-1, Token.TokenType.EPSILON);
     public static Token EOF=new Token(-1, Token.TokenType.EOF);
+    public static State EOFState=new State(-1, State.STATUS.EOF);
+    public HashMap<Token,State> tokenMap=new HashMap<>();
     static Vector<State> empty=new Vector<>();
 
 
@@ -71,12 +79,9 @@ public class CFG {
             boolean adjust=false;
             Vector<Vector<State>> recursions=new Vector<>();
             Vector<Vector<State>> noneRecursions=new Vector<>();
-            System.out.println(production);
-            System.out.println(production.getResult());
-            System.out.println(production.getRightPart());
-            System.out.println("call");
+
             for(Vector<State> dividence:production.getRightPart()){
-                System.out.println(dividence.size());
+                //System.out.println(dividence.size());
                 if(dividence.size()>1 && dividence.get(0)==production.getResult()){
                     recursions.add(dividence);
                 }
@@ -88,10 +93,11 @@ public class CFG {
             if(recursions.size()>0) {
                 //存在直接左递归
                 State state = new State(states.size(), State.STATUS.MID);
+                state.setDescription(production.getResult().getDescription()+states.size());
                 Production newProduction = new Production();
                 newProduction.setResult(state);
                 for (Vector<State> pro : recursions) {
-                    System.out.println("add!");
+                    //System.out.println("add!");
                     pro.add(state);
                 }
                 recursions.add(new Vector<State>());
@@ -131,6 +137,7 @@ public class CFG {
         for(int i=0;i<size;i++){
             System.out.println(i);
             State state=states.get(i);
+            //ystem.out.println(state.getDescription());
             if(state.getStatus()!=State.STATUS.TOKEN) {
                 Production pro=transitions.get(state);
                 int size2=pro.getRightPart().size();
@@ -151,8 +158,91 @@ public class CFG {
                         }
                     }
                 }
-                if(removeDirectLeftRecursion(transitions.get(state)))i++;
-                System.out.println(i);
+                removeDirectLeftRecursion(transitions.get(state));
+            }
+
+        }
+    }
+
+    public void removeEpsilonExpressions(){
+        HashSet<State> EpsilonStates=new HashSet<>();
+        for(State s:states){
+            if(s.getStatus()!=State.STATUS.TOKEN){
+                Production pro=transitions.get(s);
+                for(int i=0;i<pro.getRightPart().size();i++){
+                    Vector rightpart=pro.getRightPart().get(i);
+                    if(rightpart.size()==0){
+                        EpsilonStates.add(s);
+                        pro.getRightPart().remove(i);
+                        i--;
+                    }
+                }
+            }
+        }
+        for(State s:states){
+            if(s.getStatus()!=State.STATUS.TOKEN){
+                Production pro=transitions.get(s);
+                int size=pro.getRightPart().size();
+                for(int i=0;i<size;i++){
+                    Vector<State> rightpart=pro.getRightPart().get(i);
+                    Vector<State> newRightPart=new Vector<>();
+                    for(int j=0;j<rightpart.size();j++){
+                        State tmp=rightpart.get(j);
+                        if(!EpsilonStates.contains(tmp))
+                            newRightPart.add(tmp);
+                    }
+                    if(newRightPart.size()!=rightpart.size())pro.getRightPart().add(newRightPart);
+                }
+            }
+        }
+
+    }
+
+    public void removeCommonSubExpressions(){
+        for(int i=0;i<states.size();i++){
+            State state=states.get(i);
+            if(state.getStatus()!= State.STATUS.TOKEN) {
+                Production pro = transitions.get(state);
+                if (pro.getRightPart().size() > 1) {
+                    for (int j = 0; j < pro.getRightPart().size(); j++) {
+                        Vector<State> rightpart = pro.getRightPart().get(j);
+                        for (int k = 0; k < pro.getRightPart().size(); k++) {
+                            if (k == j) continue;
+                            Vector<State> rightpart2 = pro.getRightPart().get(k);
+                            Vector<State> longestCommon = new Vector<>();
+                            int t = 0;
+                            for (t = 0; t < rightpart.size() && t < rightpart2.size(); t++) {
+                                if (rightpart.get(t) == rightpart2.get(t)) {
+                                    longestCommon.add(rightpart.get(t));
+                                } else break;
+                            }
+                            if (longestCommon.size() != 0) {
+                                for (int m = 0; m < t; m++) {
+                                    rightpart.remove(0);
+                                    rightpart2.remove(0);
+                                }
+
+
+                                    pro.getRightPart().remove(rightpart);
+                                    pro.getRightPart().remove(rightpart2);
+
+                                    State newState = new State(states.size(), State.STATUS.MID);
+                                    newState.setDescription(state.getDescription() + states.size());
+                                    Production newProduction = new Production();
+                                    newProduction.setResult(newState);
+                                    Vector<Vector<State>> newS = new Vector<>();
+                                    newS.add(rightpart);
+                                    newS.add(rightpart2);
+                                    newProduction.setRightPart(newS);
+                                    this.states.add(newState);
+                                    addProduction(newProduction);
+                                    longestCommon.add(newState);
+                                    pro.getRightPart().add(longestCommon);
+
+                            }
+                        }
+                    }
+                }
             }
 
         }
@@ -186,10 +276,10 @@ public class CFG {
                             else{
                                 boolean isEmpty=true;
                                 for(int j=0;j<vec.size();j++) {
-                                    System.out.print("hahaha,");
-                                    System.out.println(vec.get(j).getStatus());
+                                    //System.out.print("hahaha,");
+                                    //System.out.println(vec.get(j).getStatus());
                                     if(vec.get(j).getStatus()==State.STATUS.TOKEN){
-                                        System.out.println("token");
+                                        //System.out.println("token");
                                         isEmpty=false;
                                         break;
                                     }
@@ -283,6 +373,7 @@ public class CFG {
     }
 
     public HashSet<Token> getFirst(State s){
+        if(this.firstSet.size()==0)getFirsts();
         if(s.getStatus()==State.STATUS.TOKEN){
             HashSet<Token> res=new HashSet<>();
             res.add(s.getToken());
@@ -295,7 +386,7 @@ public class CFG {
     }
 
     public boolean isFinallyEmpty(State s){
-        System.out.println(s.getStatus());
+        //System.out.println(s.getStatus());
         if(s.getStatus()==State.STATUS.TOKEN)return false;
         if(isEmpty.containsKey(s))return isEmpty.get(s);
         if(transitions.get(s).getRightPart().contains(empty)) {
@@ -321,6 +412,7 @@ public class CFG {
 
     public void Broaden(){
         State s=new State(startState.getId(),startState.getStatus());
+        s.setDescription(startState.getDescription()+states.size());
         startState.setId(states.size());
         startState.setStatus(State.STATUS.MID);
         Production pro=new Production();
@@ -333,15 +425,29 @@ public class CFG {
         addProduction(pro);
         this.states.add(s);
     }
+
+    public void print(){
+        for(Production pro:productions){
+            for(Vector<State> rightpart:pro.getRightPart()) {
+                System.out.print(pro.getResult().getDescription());
+
+                System.out.print("->");
+                for (State s : rightpart) {
+                    System.out.print(s.getDescription()+" ");
+                }
+                System.out.println();
+            }
+        }
+    }
     public static void main(String args[]){
         State S=new State(0, State.STATUS.STRART);
         State A=new State(1, State.STATUS.MID);
         State B=new State(2, State.STATUS.MID);
         State C=new State(3, State.STATUS.MID);
         State D=new State(4, State.STATUS.MID);
-        State a=new State(5, new Token(1,'a'));
-        State b=new State(6, new Token(2,'b'));
-        State c=new State(7, new Token(3,'c'));
+        State a=new State(5, new Token(1,"a"));
+        State b=new State(6, new Token(2,"b"));
+        State c=new State(7, new Token(3,"c"));
 
         Vector<State> states=new Vector<>();
         states.addAll(Arrays.asList(
@@ -411,8 +517,8 @@ public class CFG {
         //System.out.println(s);
         System.out.println("a");
         State MAR=new State(0, State.STATUS.STRART);
-        State ax=new State(1,new Token(0,'a'));
-        State cx=new State(1,new Token(1,'c'));
+        State ax=new State(1,new Token(0,"a"));
+        State cx=new State(1,new Token(1,"c"));
         Vector<State> currentStates=new Vector<>(Arrays.asList(new State[]{
                 MAR,ax,cx
         }));

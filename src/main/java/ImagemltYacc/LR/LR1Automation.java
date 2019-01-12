@@ -11,17 +11,33 @@ public class LR1Automation {
     private CFG cfg;
     public Vector<HashMap<State,LRItem>> Closures;
     public Vector<LR1Item> items;
+    private HashMap<LR1Item,HashSet<LR1Item>> closureMap=new HashMap<>();
 
     public LR1Automation(CFG cfg) {
         this.cfg = cfg;
+        int i=0;
+        for(Production pro:cfg.getProductions()){
+            for(Vector<State> s:pro.getRightPart()){
+                SingleProuction single=new SingleProuction(pro.getResult(),s);
+                this.productions.add(single);
+                singleProductionIdMap.put(single,i);
+                i++;
+            }
+        }
     }
+
+    static Action accept=new Action();
 
     public HashMap<HashSet<LR1Item>,HashMap<State,Integer>> transitionTable=new HashMap<>();
     public Vector<HashSet<LR1Item>> LRStates=new Vector<>();
     private HashSet<HashSet<LR1Item>> hashSet=new HashSet<>();
     private HashMap<HashSet<LR1Item>,Integer> idMap=new HashMap<>();
-
-
+    private Vector<SingleProuction> productions=new Vector<>();
+    private HashMap<SingleProuction,Integer>singleProductionIdMap=new HashMap<>();
+    private LR1Item startItem;//new LR1Item(cfg.getStartState(),0,cfg.getTransitions().get(cfg.getStartState()).getRightPart().get(0),CFG.EOF)
+    private LR1Item endItem;//new LR1Item(cfg.getStartState(),1,cfg.getTransitions().get(cfg.getStartState()).getRightPart().get(0),CFG.EOF);
+    public HashMap<Integer,HashMap<Token,Action>> actionTable=new HashMap<>();
+    public HashMap<Integer,HashMap<State,Integer>> gotoTable=new HashMap<>();
 
     public Vector<LRItem> LRItems2LRI1tems(){
         Vector<LRItem> ans=new Vector<>();
@@ -29,11 +45,15 @@ public class LR1Automation {
     }
 
     public HashSet<LR1Item> getlr1Closure(LR1Item item){
+        if(closureMap.containsKey(item)){
+            return closureMap.get(item);
+        }
         HashSet<LR1Item> ans=new HashSet<>();
         //ans.add(item);
         Stack<LR1Item> stack=new Stack<>();
         stack.push(item);
         while(!stack.empty()){
+
             LR1Item tmp=stack.pop();
             ans.add(tmp);
             int cur=tmp.getCursor();
@@ -58,8 +78,10 @@ public class LR1Automation {
                         for (Vector<State> rightpart : pro.getRightPart()) {
                             //if (cur == tmp.getRighPart().size() - 1) {
                                 LR1Item lr = new LR1Item(next, 0, rightpart, t);
-                                ans.add(lr);
-                                stack.push(lr);
+                                if(!ans.contains(lr)) {
+                                    ans.add(lr);
+                                    stack.push(lr);
+                                }
                             //}
                         }
                     }
@@ -67,6 +89,7 @@ public class LR1Automation {
 
             }
         }
+        closureMap.put(item,ans);
         return ans;
     }
 
@@ -116,13 +139,19 @@ public class LR1Automation {
                 idMap.put(res,LRStates.size()-1);
             }
         }
+
         return res;
     }
 
 
     public void generateLR1Clousres(){
-        HashSet<LR1Item> initialSet=getlr1Closure(new LR1Item(cfg.getStartState(),0,cfg.getTransitions().get(cfg.getStartState()).getRightPart().get(0),CFG.EOF));
+        startItem=new LR1Item(cfg.getStartState(),0,cfg.getTransitions().get(cfg.getStartState()).getRightPart().get(0),CFG.EOF);
+        endItem=new LR1Item(cfg.getStartState(),1,cfg.getTransitions().get(cfg.getStartState()).getRightPart().get(0),CFG.EOF);
+
+
+        HashSet<LR1Item> initialSet=getlr1Closure(startItem);
         this.LRStates.add(initialSet);
+        idMap.put(initialSet,0);
         boolean increase=true;
         Stack<HashSet<LR1Item>> stack=new Stack<>();
         stack.push(initialSet);
@@ -144,20 +173,159 @@ public class LR1Automation {
         }
     }
 
+    public void generateActionGoto() throws Exception{
+        for(HashSet<LR1Item> state:LRStates){
+            gotoTable.put(idMap.get(state),new HashMap<State, Integer>());
+            actionTable.put(idMap.get(state),new HashMap<Token, Action>());
+            HashMap currentGoto=gotoTable.get(idMap.get(state));
+            HashMap currentAction=actionTable.get(idMap.get(state));
+            for(LR1Item item:state){
+                if(item.equals(endItem)){
+                    if(currentAction.containsKey(CFG.EOFState)) {
+                        if (currentAction.get(CFG.EOFState) != accept)
+                            throw new Exception("NOT PROPER LR1 SYNTAX");
+                    }
+                    else {
+                        currentAction.put(CFG.EOF, accept);
+                    }
+                }
+                else if(item.getCursor()==item.getRighPart().size()){
+                    //规约
+                    if(item.getResult()==cfg.getStartState())
+                        throw new Exception("NOT PROPER LR1 SYNTAX");
+                       Action act=new Action(singleProductionIdMap.get(new SingleProuction(item.getResult(),item.getRighPart())),Action.Act.REDUCE);
+                    if(currentAction.containsKey(item.getFollow())){
+                        Action dest=(Action)currentAction.get(item.getFollow());
+                        if(!dest.equals(act)) {
+                            if(dest.getAction()== Action.Act.SHIFT){
+                                int reduceId=act.getDestId();//要规约的id;
+                                int shiftId=dest.getShiftId();//要移入的id;
+                                if(shiftId>reduceId)continue;//shift优先级更高
+                                else{//reduce优先级更高，采取reduce
+                                    currentAction.put(item.getFollow(),act);
+                                    continue;
+                                }
+                            }
+                            throw new Exception("NOT PROPER LR1 SYNTAX");
+                        }
+                    }else {
+                        currentAction.put(item.getFollow(), act);
+                    }
+                }
+                else if(item.getRighPart().get(item.getCursor()).getStatus()== State.STATUS.TOKEN){
+                    //移入
+                    Action act= new Action(transitionTable.get(state).get(item.getRighPart().get(item.getCursor())), Action.Act.SHIFT,singleProductionIdMap.get(new SingleProuction(item.getResult(),item.getRighPart())));
+                    if(currentAction.containsKey(item.getRighPart().get(item.getCursor()).getToken())) {
+                        Action dest=(Action)currentAction.get(item.getRighPart().get(item.getCursor()).getToken());
+                        if(!dest.equals(act)) {
+                            if(dest.getAction()==Action.Act.REDUCE){
+                                int reduceId=dest.getDestId();
+                                int shiftId=act.getShiftId();
+                                if(reduceId>=shiftId)continue;//reduce优先级更高，采取reduce
+                                else{//shift优先级更高 采取shift
+                                    currentAction.put(item.getRighPart().get(item.getCursor()).getToken(),act);
+                                    continue;
+                                }
+                            }
+                            throw new Exception("NOT PROPER LR1 SYNTAX");
+                        }
+                    }
+                    else {
+                        currentAction.put(item.getRighPart().get(item.getCursor()).getToken(), act);
+                    }
+                }
+                else if(item.getRighPart().get(item.getCursor()).getStatus()!=State.STATUS.TOKEN){
+                    int dest=transitionTable.get(state).get(item.getRighPart().get(item.getCursor()));
+                    if(currentGoto.containsKey(item.getRighPart().get(item.getCursor()))) {
+                        if(dest!=(int)currentGoto.get(item.getRighPart().get(item.getCursor())))
+                        throw new Exception("NOT PROPER LR1 SYNTAX");
+                    }
+                    currentGoto.put(item.getRighPart().get(item.getCursor()),dest);
+
+                }
+            }
+        }
+    }
+
+    /*
+    移入规约算法
+     */
+    public void ShiftReduce(Vector<Token> tokens)throws Exception{
+        tokens.add(CFG.EOF);
+        Stack<HashSet<LR1Item>> stateStack=new Stack<>();
+        Stack<State> symbolStack=new Stack<>();
+        stateStack.push(LRStates.get(0));
+        int pos=0;
+        while(true){
+            HashSet<LR1Item> top=stateStack.pop();
+            stateStack.push(top);
+            Action act=actionTable.get(idMap.get(top)).get(tokens.get(pos));
+            if(act==null){
+                throw new Exception("invalid token:"+tokens.get(pos).getCh());
+            }
+            if(act.getAction()== Action.Act.SHIFT){
+                stateStack.push(LRStates.get(act.getDestId()));
+                symbolStack.push(cfg.tokenMap.get(actionTable.get(top)));
+                pos++;
+            }
+            else if(act.getAction()== Action.Act.REDUCE){
+                SingleProuction pro=productions.get(act.getDestId());
+                int size=pro.getRightPart().size();
+                while(size>0){
+                    stateStack.pop();
+                    symbolStack.pop();
+                    size--;
+                }
+                symbolStack.push(pro.getResult());
+                top=stateStack.pop();
+                stateStack.push(top);
+                stateStack.add(LRStates.get(gotoTable.get(idMap.get(top)).get(pro.getResult())));
+                System.out.print(pro.getResult().getDescription());
+                System.out.print("->");
+                for(State s:pro.getRightPart()){
+                    System.out.print(s.getDescription()+" ");
+                }
+                System.out.println();
+            }
+            else if(act.getAction()== Action.Act.ACCEPT){
+                System.out.println("Match Success");
+                break;
+            }
+        }
+
+
+    }
+
+
+
+
     public static void main(String args[]){
+
+        //赋值语法生成自动机test case
+
+        Vector<Token> tokens=new Vector<Token>(Arrays.asList(new Token[]{
+                new Token(1,"a"),new Token(2,"="),new Token(3,"*")
+        }));
         State S=new State(0, State.STATUS.STRART);
+        S.setDescription("S");
         State L=new State(1, State.STATUS.MID);
+        L.setDescription("L");
         State R=new State(2, State.STATUS.MID);
+        R.setDescription("R");
         //State C=new State(3, State.STATUS.MID);
         //State D=new State(4, State.STATUS.MID);
-        State a=new State(5, new Token(1,'a'));
-        State eq=new State(6, new Token(2,'='));
-        State mul=new State(7, new Token(3,'*'));
+        State a=new State(5, tokens.get(0));
+        a.setDescription("a");
+        State eq=new State(6, tokens.get(1));
+        eq.setDescription("=");
+        State mul=new State(7, tokens.get(2));
+        mul.setDescription("*");
 
         Vector<State> states=new Vector<>();
         states.addAll(Arrays.asList(
                 new State[]{S,L,R,a,eq,mul}
         ));
+
         CFG cfg=new CFG(states);
         Production production1=new Production();
         production1.setResult(S);
@@ -190,7 +358,7 @@ public class LR1Automation {
         production3.setRightPart(right_3);
         cfg.addProduction(production3);
         cfg.setStartState(S);
-        cfg.removeLeftRecurision();
+        //cfg.removeLeftRecurision();
         cfg.Broaden();
         cfg.getFollows();
 
@@ -200,9 +368,25 @@ public class LR1Automation {
 
         automation.generateLR1Clousres();
 
+        try {
+            automation.generateActionGoto();
+        }
+        catch(Exception e){
+            e.printStackTrace();
+        }
 
+        Vector<Token> serial=new Vector<>(Arrays.asList(
+                new Token[]{
+                     tokens.get(0)
+                }
+        ));
 
-
+        try {
+            automation.ShiftReduce(serial);
+        }
+        catch(Exception e){
+            e.printStackTrace();
+        }
         System.out.println("end");
 
     }
