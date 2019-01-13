@@ -39,9 +39,25 @@ public class LR1Automation {
     public HashMap<Integer,HashMap<Token,Action>> actionTable=new HashMap<>();
     public HashMap<Integer,HashMap<State,Integer>> gotoTable=new HashMap<>();
 
+    public Vector<SingleProuction> getProductions() {
+        return productions;
+    }
+
+    public void setProductions(Vector<SingleProuction> productions) {
+        this.productions = productions;
+    }
+
     public Vector<LRItem> LRItems2LRI1tems(){
         Vector<LRItem> ans=new Vector<>();
         return ans;
+    }
+
+    public CFG getCfg() {
+        return cfg;
+    }
+
+    public void setCfg(CFG cfg) {
+        this.cfg = cfg;
     }
 
     public HashSet<LR1Item> getlr1Closure(LR1Item item){

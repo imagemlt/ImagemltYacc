@@ -4,8 +4,11 @@ import ImagemltYacc.CFG.CFG;
 import ImagemltYacc.CFG.Production;
 import ImagemltYacc.CFG.Token;
 import ImagemltYacc.LR.LR1Automation;
+import ImagemltYacc.io.CodeGenerator;
 import ImagemltYacc.io.YaccFile;
 
+import java.io.BufferedWriter;
+import java.io.FileWriter;
 import java.util.Vector;
 
 /**
@@ -18,7 +21,7 @@ public class App
     {
         YaccFile yaccFile;
         try {
-            yaccFile = new YaccFile("/tmp/yacc2");
+            yaccFile = new YaccFile(args[0]);
 
             CFG cfg=new CFG(yaccFile.getStates());
             Vector<Token> tokens=yaccFile.getTokens();
@@ -34,14 +37,14 @@ public class App
             automation.generateLR1Clousres();
             automation.generateActionGoto();
 
-            System.out.println("[+]bingo!");
-            Vector<Token> inputSample=new Vector<>();
-            inputSample.add(tokens.get(5));
-            inputSample.add(tokens.get(4));
-            inputSample.add(tokens.get(0));
-            inputSample.add(tokens.get(9));
-            inputSample.add(tokens.get(6));
-            automation.ShiftReduce(inputSample);
+            System.out.println("[+]action goto table bingo!");
+            CodeGenerator generator=new CodeGenerator(yaccFile.getNonTerminals(),tokens,automation,yaccFile);
+            //System.out.println(generator.genCode());
+            BufferedWriter writer=new BufferedWriter(new FileWriter(args[1]));
+            writer.write(generator.genCode());
+            writer.flush();
+            writer.close();
+            System.out.println("[+]generate Parser successfully:"+args[1]);
         }
         catch(Exception e){
             e.printStackTrace();

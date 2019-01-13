@@ -19,6 +19,15 @@ public class YaccFile {
     private BufferedReader reader;
     private HashMap<String,State> reMap=new HashMap<>();
     private Vector<State> startStates;
+    private Vector<State> nonTerminals=new Vector<>();
+
+    public Vector<State> getNonTerminals() {
+        return nonTerminals;
+    }
+
+    public void setNonTerminals(Vector<State> nonTerminals) {
+        this.nonTerminals = nonTerminals;
+    }
 
     public String getUserCode() {
         return UserCode;
@@ -73,11 +82,12 @@ public class YaccFile {
             else{
                 //Token t=new Token(tokens.size(),line);
                 //tokens.add(t);
-                State state=new State(states.size(), State.STATUS.STRART);
+                State state=new State(startStates.size(), State.STATUS.STRART);
                 state.setDescription(line);
                 states.add(state);
                 startStates.add(state);
                 reMap.put(line,state);
+                nonTerminals.add(state);
             }
         }
     }
@@ -89,6 +99,7 @@ public class YaccFile {
             if(line==null)throw new Exception("Yacc Format Error");
             else if(line.startsWith("%%"))break;
         }
+        int i=startStates.size();
         while(true){
             String line=reader.readLine();
             if(line==null)throw new Exception("Yacc Format Error");
@@ -98,11 +109,12 @@ public class YaccFile {
                 if (splits.length != 2) continue;
                 State state;
                 if (!reMap.containsKey(splits[0])) {
-                    state = new State(states.size(), State.STATUS.MID);
+                    state = new State(i, State.STATUS.MID);
                     state.setDescription(splits[0]);
                     states.add(state);
                     reMap.put(splits[0], state);
-
+                    nonTerminals.add(state);
+                    i++;
                 }
                 else {
                     state=reMap.get(splits[0]);

@@ -10,9 +10,13 @@ public class CFG {
         this.states = states;
         this.productions=new Vector<>();
         this.transitions=new HashMap<>();
+        this.noneTerminals=new Vector<>();
         for(State s:states){
             if(s.getStatus()== State.STATUS.TOKEN){
                 tokenMap.put(s.getToken(),s);
+            }
+            else{
+                noneTerminals.add(s);
             }
         }
         tokenMap.put(EOF,EOFState);
@@ -26,6 +30,7 @@ public class CFG {
 
     private Vector<Production> productions;
     private Vector<State> states;
+    private Vector<State> noneTerminals;
 
     public HashMap<State, Production> getTransitions() {
         return transitions;
@@ -39,6 +44,14 @@ public class CFG {
     private HashMap<State,Boolean> isEmpty=new HashMap<>();
     private HashMap<State,HashSet<Token>> firstSet=new HashMap<>();
     private HashMap<State,HashSet<Token>> followSet=new HashMap<>();
+
+    public Vector<State> getNoneTerminals() {
+        return noneTerminals;
+    }
+
+    public void setNoneTerminals(Vector<State> noneTerminals) {
+        this.noneTerminals = noneTerminals;
+    }
 
     public State getStartState() {
         return startState;
@@ -411,9 +424,9 @@ public class CFG {
     }
 
     public void Broaden(){
-        State s=new State(startState.getId(),startState.getStatus());
+        State s=new State(noneTerminals.size(),startState.getStatus());
         s.setDescription(startState.getDescription()+states.size());
-        startState.setId(states.size());
+        //startState.setId(states.size());
         startState.setStatus(State.STATUS.MID);
         Production pro=new Production();
         pro.setRightPart(new Vector<Vector<State>>());
@@ -424,6 +437,7 @@ public class CFG {
         this.startState=s;
         addProduction(pro);
         this.states.add(s);
+        this.noneTerminals.add(s);
     }
 
     public void print(){
