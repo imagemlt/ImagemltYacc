@@ -409,7 +409,7 @@ public class CFG {
         for(Vector<State>vect:transitions.get(s).getRightPart()){
             boolean empty=true;
             for(State state:vect){
-                if(!isFinallyEmpty(state)){
+                if(state !=s && !isFinallyEmpty(state)){
                     empty=false;
                     break;
                 }

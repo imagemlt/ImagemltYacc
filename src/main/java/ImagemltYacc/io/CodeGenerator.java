@@ -123,7 +123,7 @@ public class CodeGenerator {
             "            stateStack.push(top);\n" +
             "            Pair<ACTION,Integer> act=actionTable.get(top).get(tokens.get(pos).getTokenType());\n" +
             "            if(act==null){\n" +
-            "                throw new Exception(\"invalid token:\"+Tokens[tokens.get(pos).getTokenType()]);\n" +
+            "                throw new Exception(\"invalid token:\"+Tokens[tokens.get(pos).getTokenType()]+\",\"+tokens.get(pos).getTokenValue());\n" +
             "            }\n" +
             "            if(act.getKey()== ACTION.SHIFT){\n" +
             "                stateStack.push(act.getValue());\n" +

@@ -222,7 +222,7 @@ public class LR1Automation {
                                     continue;
                                 }
                             }
-                            throw new Exception("NOT PROPER LR1 SYNTAX");
+                            throw new Exception("NOT PROPER LR1 SYNTAX:"+productions.get(dest.getDestId()).getResult().getDescription()+","+productions.get(act.getDestId()).getResult().getDescription());
                         }
                     }else {
                         currentAction.put(item.getFollow(), act);

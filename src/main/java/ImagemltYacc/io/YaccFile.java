@@ -80,6 +80,7 @@ public class YaccFile {
             if(line==null)throw new Exception("Yacc Format Error");
             else if(line.startsWith("%%"))return;
             else{
+                System.out.println(line);
                 //Token t=new Token(tokens.size(),line);
                 //tokens.add(t);
                 State state=new State(startStates.size(), State.STATUS.STRART);
@@ -109,6 +110,7 @@ public class YaccFile {
                 if (splits.length != 2) continue;
                 State state;
                 if (!reMap.containsKey(splits[0])) {
+                    System.out.println(splits[0]);
                     state = new State(i, State.STATUS.MID);
                     state.setDescription(splits[0]);
                     states.add(state);
