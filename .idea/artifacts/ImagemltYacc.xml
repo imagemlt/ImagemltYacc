@@ -1,0 +1,11 @@
+<component name="ArtifactManager">
+  <artifact type="jar" name="ImagemltYacc">
+    <output-path>$PROJECT_DIR$/out/artifacts/ImagemltYacc</output-path>
+    <root id="archive" name="ImagemltYacc.jar">
+      <element id="directory" name="META-INF">
+        <element id="file-copy" path="$PROJECT_DIR$/META-INF/MANIFEST.MF" />
+      </element>
+      <element id="module-output" name="ImagemltYacc" />
+    </root>
+  </artifact>
+</component>

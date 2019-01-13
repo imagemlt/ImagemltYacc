@@ -17,9 +17,7 @@ public class CodeGenerator {
     private YaccFile yaccFile;
     private static String head="import javafx.util.Pair;\n" +
             "\n" +
-            "import java.io.BufferedReader;\n" +
-            "import java.io.FileReader;\n" +
-            "import java.io.InputStreamReader;\n" +
+            "import java.io.*;\n" +
             "import java.util.*;\n" +
             "\n" +
             "public class Parser {\n" +
